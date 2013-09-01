@@ -2,6 +2,8 @@ import ddf.minim.*;
 import processing.net.*;
 import pathfinder.*;
 
+//Graph
+//GraphNode[]
 Client myClient;
 Minim minim;
 AudioPlayer sound_music;
@@ -17,11 +19,12 @@ PImage[] humanSpriteSheetUp, humanSpriteSheetDown, humanSpriteSheetLeft, humanSp
 werewolfSpriteSheetUp, werewolfSpriteSheetDown, werewolfSpriteSheetLeft, werewolfSpriteSheetRight, werewolfSpriteSheetIdle;
 String ipAdress, serverInput, serverExeUrl, playerName, mapName, map_dataFileName, mapsFolderName, mapURL, imagesFolderName, audioFolderName;
 String serverData[][];
-boolean isAllImagesLoaded, isMainPlayer, isKeyReleased, isErrorMsg, isEnterPressed, //willBeMainPlayer?
+boolean isAllImagesLoaded, isMainPlayer, isKeyReleased, isErrorMsg, isEnterPressed,
 movingLeft, movingRight, movingUp, movingDown; // isMainPlayer for the client who update bots, when plays solo or host the game
-int sceneNumber, serverPort, time2host, time2Check, timer, playerAmount, playerAmount_maxPerTeam, frameR, frameC;
+int sceneNumber, serverPort, time2host, time2Check, timer, playerAmount, playerAmount_maxPerTeam, frameR, frameC, wwCount;
 byte map_version, map_path_value, map_wall_value, map_tower_value, map_spawnTeam1_value, map_spawnTeam2_value;
 byte[] px;
+IntList tower_px;
 
 void setup()
 {
@@ -40,12 +43,12 @@ void setup()
   map_spawnTeam1_value = 3;
   map_spawnTeam2_value = 4;
   sceneNumber = time2Check = playerAmount = time2host
-  = frameR = frameC = 0;
+  = wwCount = frameR = frameC = 0;
   timer = 1;
   playerAmount_maxPerTeam = 5;
   serverPort = 4233;
   isKeyReleased = true;
-  isAllImagesLoaded = isMainPlayer = isErrorMsg = isEnterPressed// = willBeMainPlayer
+  isAllImagesLoaded = isMainPlayer = isErrorMsg = isEnterPressed
   = movingLeft = movingRight = movingUp = movingDown = false;
   ipAdress = "localhost";
   serverExeUrl = sketchPath("") + "server\\HunTiming_Server.exe";
@@ -69,6 +72,7 @@ void setup()
   werewolfFullPictureRight = requestImage(imagesFolderName + "player_ww_right.png");
   werewolfFullPictureIdle = requestImage(imagesFolderName + "player_ww_idle.png");
   players = new ArrayList<Player>();
+  tower_px = new IntList();
   scene_menu = new Scene(0, background_menuSene);
   scene_prepa = new Scene(1, background_prepaSene);
   scene_score = new Scene(3, background_scoreSene);
@@ -146,7 +150,7 @@ void receiveServerData()
   {
     serverInput = myClient.readString();
     
-    println("Data in Client : " + serverInput);
+    //println("Data in Client : " + serverInput);
     
     serverRawDataPerClients = split(serverInput, '!');
     serverData = new String[serverRawDataPerClients.length][];
@@ -249,7 +253,6 @@ void createClient()
     {
       time2host = 0;
       myClient = new Client(this, ipAdress, serverPort);
-      //myClient.write("n666 " + playerName + "!");
       sceneNumber = 1;
     }
     else
@@ -262,7 +265,6 @@ void createClient()
   {
     if (myClient != null)
     {
-      //myClient.write("n666 " + playerName + "!");
       if (serverData != null)
       {
         sceneNumber = 1;
@@ -320,4 +322,14 @@ void go2TheGameScene()
   sceneNumber = 2;
 }
 
+void resetGame()
+{
+  players.clear();
+  tower_px.clear();
+  scene_prepa = new Scene(1, background_prepaSene);
+  scene_score = new Scene(3, background_scoreSene);
+  scene_game = null;
+  playerAmount = 0;
+  sceneNumber = 1;
+}
 

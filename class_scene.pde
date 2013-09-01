@@ -33,6 +33,12 @@ class Scene
       this.button_text_1 = "Map";
       this.button_text_2 = "Launch";
     }
+    else if (id == 3)
+    {
+      this.button_AABB_1 = new int[] { int(width * 0.3), int(height * 0.4), 150, 30 };
+      this.button_AABB_2 = new int[] { int(width * 0.8), int(height * 0.85), 150, 30 };
+      this.button_text_1 = "Play again";
+    }
   }
   
   void update ()
@@ -98,7 +104,7 @@ class Scene
       break;
       // --------------------------------------------------------------------------------
       case 1:
-        if (myClient != null && second() % 2 == 0)
+        if (myClient != null && second() % 2 == 0) // send data
         {
           myClient.write("n666 " + playerName + "!pampt " + playerAmount_maxPerTeam + "!");
         }
@@ -156,7 +162,7 @@ class Scene
           }
         }
         
-        if (serverData != null && serverData.length > 0) //ajout de nouveaux joueurs
+        if (serverData != null && serverData.length > 0) // receive data = ajout de nouveaux joueurs
         {
           String clienTeam;
           if (players.size() % 2 == 0) clienTeam = "1";
@@ -166,7 +172,7 @@ class Scene
           {
             if (players.size() == 0)
             {
-              if (serverData[i1][0].equals("n666"))
+              if (serverData[i1].length > 1 && serverData[i1][0].equals("n666"))
               {
                 players.add(new Player(serverData[i1][1], false, clienTeam));
                 reservedName.append(serverData[i1][1]);
@@ -175,29 +181,27 @@ class Scene
             }
             else
             {
-              
-            if (serverData[i1].length == 2)
-            {
-              if (serverData[i1][0].equals("n666")
-              && !reservedName.hasValue(serverData[i1][1]))
+              if (serverData[i1].length == 2)
               {
-                players.add(new Player(serverData[i1][1], false, clienTeam));
-                reservedName.append(serverData[i1][1]);
-                playerAmount++;
-              }
-              if (serverData[i1][0].equals("pampt") && !isMainPlayer)
-              {
-                playerAmount_maxPerTeam = int(serverData[i1][1]);
-              }
-              if (serverData[i1][0].equals("map") && !isMainPlayer)
-              {
-                mapName = serverData[i1][1];
-              }
-              if (serverData[i1][0].equals("go"))
-              {
-                this.required_2 = true;
-              }
-                
+                if (serverData[i1].length > 1 && serverData[i1][0].equals("n666")
+                && !reservedName.hasValue(serverData[i1][1]))
+                {
+                  players.add(new Player(serverData[i1][1], false, clienTeam));
+                  reservedName.append(serverData[i1][1]);
+                  playerAmount++;
+                }
+                if (serverData[i1][0].equals("pampt") && !isMainPlayer)
+                {
+                  playerAmount_maxPerTeam = int(serverData[i1][1]);
+                }
+                if (serverData[i1][0].equals("map") && !isMainPlayer)
+                {
+                  mapName = serverData[i1][1];
+                }
+                if (serverData[i1][0].equals("go"))
+                {
+                  this.required_2 = true;
+                }
               }
             }
           }
@@ -225,23 +229,11 @@ class Scene
         frameR = (frameR + 1) % 5;
         
         stroke(255);
-        fill(0);
-        text(timer, width * 0.5, 20);
-        /*
-        if (this.timer == 0)
-        {
-          if (!this.required_1)
-          {
-            this.required_1 = true;
-            for (int i = 0; i < playerAmount; i++)
-            {
-              if (players.get(i).team.equals("1")) players.get(i).team = "2";
-              else players.get(i).team = "1";
-            }
-          }
-        }
-        else this.required_1 = false;
-        */
+        fill(200, 0, 255);
+        textSize(80);
+        text(timer, width * 0.5 - textWidth(nfc(timer)) * 0.75, 0);
+        textSize(20);
+        
         switch (this.state)
         {
           case 0:
@@ -256,6 +248,10 @@ class Scene
               {
                 this.team_2_spawn_x = i % width;
                 this.team_2_spawn_y = floor(i / width);
+              }
+              else if (px[i] == map_tower_value)
+              {
+                tower_px.append(i);
               }
             }
             for (int i = 0; i < playerAmount; i++)
@@ -275,10 +271,6 @@ class Scene
                 //println("-----------------------------> yep!");
                 myPlayer = players.get(i);
               }
-              /*if (players.get(i).isBot)
-              {
-                players.get(i).update4Server();
-              }*/
             }
             this.state = 1;
           break;
@@ -291,27 +283,28 @@ class Scene
             noStroke();
             ellipse(myPlayer.x + myPlayer.posX2CenterTheText, myPlayer.y + myPlayer.h, myPlayer.w, 20);
             
+            for (int i = 0, c = players.size(); i < c; i++)
+            {
+              players.get(i).clientUpdate();
+              
+              if (myPlayer.canSwitch && checkCollision(myPlayer.box, players.get(i).box))
+              {
+                if (myPlayer.team.equals("1") && players.get(i).team.equals("2"))
+                {
+                  myPlayer.team = "2";
+                  myPlayer.deathCount++;
+                }
+                else if (myPlayer.team.equals("2") && players.get(i).team.equals("1"))
+                {
+                  myPlayer.killCount++;
+                }
+              }
+            }
+            
             if (myClient != null)
             {
               myClient.write("u " + myPlayer.name + " " + myPlayer.team + " " + myPlayer.animationName + " "
               + myPlayer.x + " " + myPlayer.y + "!");
-            }
-            else // if "solo" mode
-            {
-              for (int i = 0, c = players.size(); i < c; i++)
-              {
-                //players.get(i).clientUpdate();
-                //players.get(i).update4Server();
-                //stroke(0,255,0);
-                //rect(players.get(i).box[0], players.get(i).box[1], players.get(i).box[2], players.get(i).box[3]);
-                players.get(i).clientUpdate();
-                if (myPlayer.team.equals("1") && players.get(i).team.equals("2")
-                && myPlayer.canSwitch && checkCollision(myPlayer.box, players.get(i).box))
-                {
-                  println("aaaaaaaaaaaaaaaaarrrrrrrrrggggg!!!");
-                  myPlayer.team = "2";
-                }
-              }
             }
             
             // ------------------------------------ //
@@ -323,20 +316,48 @@ class Scene
               
               for (int i1 = 0, c1 = players.size(); i1 < c1; i1++)
               {
+                if (players.get(i1).team.equals("2"))
+                {
+                  wwCount++;
+                }
+                
                 if (players.get(i1).isBot)
                 {
-                  //players.get(i1).clientUpdate();
-                  
                   for (int i2 = 0, c2 = players.size(); i2 < c2; i2++)
                   {
-                    if (players.get(i1).team.equals("1") && players.get(i2).team.equals("2") //&& myPlayer.canCollide
-                    && myPlayer.canSwitch && checkCollision(players.get(i1).box, players.get(i2).box))
+                    // AI
+                    if (!players.get(i1).team.equals(players.get(i2).team)) 
                     {
-                      players.get(i1).team = "2";
+                      if (abs((players.get(i1).x - players.get(i2).x) + abs(players.get(i1).y - players.get(i2).y))
+                      < players.get(i1).margin2FindTarget_bot)
+                      {
+                        players.get(i1).margin2FindTarget_bot = abs(players.get(i1).x - players.get(i2).x)
+                        + abs(players.get(i1).y - players.get(i2).y);
+                        //println(players.get(i1).margin2FindTarget);
+                        players.get(i1).target_xy_bot[0] = players.get(i2).x;
+                        players.get(i1).target_xy_bot[1] = players.get(i2).y;
+                      }
+                    }
+                    
+                    
+                    
+                    if (myPlayer.canSwitch && checkCollision(players.get(i1).box, players.get(i2).box))
+                    {
+                      if (players.get(i1).team.equals("1") && players.get(i2).team.equals("2"))
+                      {
+                        players.get(i1).team = "2";
+                        players.get(i1).deathCount++;
+                      }
+                      else if (players.get(i1).team.equals("2") && players.get(i2).team.equals("1"))
+                      {
+                        players.get(i1).killCount++;
+                      }
                     }
                   }
                   
                   players.get(i1).update4Server();
+                  // AI search reset
+                  players.get(i1).margin2FindTarget_bot = 100000;
                   
                   if (myClient != null)
                   {
@@ -344,6 +365,15 @@ class Scene
                     + players.get(i1).animationName + " " + players.get(i1).x + " " + players.get(i1).y + "!");
                   }
                 }
+              }
+              if (wwCount == players.size())
+              {
+                if (myClient != null) myClient.write("e n d!");
+                else sceneNumber = 3;
+              }
+              else
+              {
+                wwCount = 0;
               }
             }
             
@@ -371,7 +401,6 @@ class Scene
                       }
                       //stroke(0,255,0);
                       //rect(players.get(i2).box[0], players.get(i2).box[1], players.get(i2).box[2], players.get(i2).box[3]);
-                      //players.get(i2).clientUpdate();
                     }
                   }
                 }
@@ -379,51 +408,117 @@ class Scene
                 {
                   timer = int(serverData[i1][1]);
                 }
+                else if (serverData[i1].length > 0 && serverData[i1][0].equals("e"))
+                {
+                  sceneNumber = 3;
+                }
               }
             }
-            
-            for (int i = 0, c = players.size(); i < c; i++)
-            {
-              players.get(i).clientUpdate();
-              if (myPlayer.team.equals("1") && players.get(i).team.equals("2") //&& myPlayer.canCollide
-              && myPlayer.canSwitch && checkCollision(myPlayer.box, players.get(i).box))
-              {
-                myPlayer.team = "2";
-              }
-            }
-            
-          break;
-          
-          case 2:
-          
-          break;
-          
-          case 3:
-          
           break;
         }
       break;
+      
+      // --------------------------------------------------------------------------------
       
       case 3:
         switch (this.state)
         {
           case 0:
-          
-          break;
-          
-          case 1:
-          
-          break;
-          
-          case 2:
-          
-          break;
-          
-          case 3:
-          
+          //send Data
+            if (second() %2 == 0 && myClient != null)
+            {
+              myClient.write("s " + myPlayer.name + " " + myPlayer.deathCount + " " + myPlayer.killCount + "!");
+              if (isMainPlayer)
+              {
+                myClient.write("rc " + myPlayer.roundCount + "!");
+                for (int i = 0; i < playerAmount; i++)
+                {
+                  if (players.get(i).isBot)
+                  {
+                    myClient.write("s " +  players.get(i).name + " " + players.get(i).deathCount + " " + players.get(i).killCount + "!");
+                  }
+                }
+              }
+            }
+            if (isMainPlayer)
+            {
+              stroke(255);
+              fill(32);// les boutons "launch" et "map"
+              rect(this.button_AABB_2[0], this.button_AABB_2[1], this.button_AABB_2[2], this.button_AABB_2[3], 7);
+              fill(255);
+              text(this.button_text_1, this.button_AABB_2[0] + this.button_AABB_2[2] * 0.5, this.button_AABB_2[1] + 3);
+              
+              if (isButtonClicked(this.button_AABB_2)) // button "play again"
+              {
+                if (myClient != null) myClient.write("play again!");
+                else
+               {
+                 resetGame();
+                 players.add(new Player("", false, "1"));
+                 playerAmount++;
+               }
+              }
+            }
+            fill(0); // draw the array
+            for (int i = 0, c = playerAmount + 1; i < c; i++)
+            {
+              int x = this.button_AABB_1[0];
+              int y = this.button_AABB_1[1] + i * (this.button_AABB_1[3]);
+              rect( x, y, this.button_AABB_1[2], this.button_AABB_1[3], 7);
+              rect( x + this.button_AABB_1[2], y, this.button_AABB_1[2], this.button_AABB_1[3], 7);
+              rect( x + this.button_AABB_1[2] * 2, y, this.button_AABB_1[2], this.button_AABB_1[3], 7);
+            }
+            // draw the text
+            for (int i = 0, c = playerAmount; i < c; i++)
+            {
+              int x = this.button_AABB_1[0] + int(this.button_AABB_1[2] * 0.5);
+              int y = 3 + this.button_AABB_1[1] + (i + 1) * int(this.button_AABB_1[3] );//* 0.5);
+              
+              fill(255, 0, 0);
+              text("Game Over in " + myPlayer.roundCount + " round",
+              this.button_AABB_1[0] + this.button_AABB_1[2] * 1.5, this.button_AABB_1[1] - this.button_AABB_1[3]);
+              fill(255);
+              text("Player", x, this.button_AABB_1[1] + 3);
+              text("Kills", x + this.button_AABB_1[2], this.button_AABB_1[1] + 3);
+              text("Deaths", x + this.button_AABB_1[2] * 2, this.button_AABB_1[1] + 3);
+              fill(0, 255, 0); 
+              text(players.get(i).name, x, y); // + this.button_AABB_1[3]
+              text(players.get(i).killCount, x + this.button_AABB_1[2],  y);
+              text(players.get(i).deathCount, x + this.button_AABB_1[2] * 2,  y);
+            }
+            // receive Data
+            if (serverData != null && serverData.length > 0)
+            {
+              for (int i1 = 0, c1 = serverData.length; i1 < c1; i1++)
+              {
+                if (serverData[i1].length > 1 && serverData[i1][0].equals("s"))
+                {
+                  for (int i2 = 0, c2 = players.size(); i2 < c2; i2 ++)
+                  {
+                    if (serverData[i1][1].equals(players.get(i2).name) && players.get(i2).name != myPlayer.name)
+                    {
+                      players.get(i2).deathCount = int(serverData[i1][2]);
+                      players.get(i2).killCount = int(serverData[i1][3]);
+                    }
+                  }
+                }
+                else if (serverData[i1].length > 1 && serverData[i1][0].equals("rc"))
+                {
+                  if (!isMainPlayer)
+                  {
+                    myPlayer.roundCount = int(serverData[i1][1]);
+                  }
+                }
+                else if (serverData[i1].length > 1 && serverData[i1][0].equals("play"))
+                {
+                  resetGame();
+                }
+              }
+            }
           break;
         }
       break;
     }
   }
 }
+
